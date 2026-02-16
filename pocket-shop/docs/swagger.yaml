@@ -1,0 +1,99 @@
+basePath: /api/v1
+definitions:
+  orderhdl.CreateOrderResponse:
+    properties:
+      id:
+        type: string
+      status:
+        type: string
+    type: object
+  orderhdl.GetOrderResponse:
+    properties:
+      id:
+        type: string
+      redeemCode:
+        description: null when PROCESSING or CANCELLED; required when COMPLETED
+        type: string
+      status:
+        type: string
+    type: object
+  response.ErrorResponse:
+    properties:
+      error:
+        type: string
+      errors:
+        items:
+          type: string
+        type: array
+      message:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API documentation for Order (instant gift card) service
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Order API
+  version: "1.0"
+paths:
+  /orders:
+    post:
+      consumes:
+      - application/json
+      description: Create a new instant gift card order. Reuses an available EZ order
+        from pool if any; otherwise creates a new EZ order and polls until completed
+        or timeout.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/orderhdl.CreateOrderResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Create order
+      tags:
+      - orders
+  /orders/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Get order by local order ID. Returns status and redeemCode (null
+        if PROCESSING or CANCELLED).
+      parameters:
+      - description: Local Order ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/orderhdl.GetOrderResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get order status and redeem code
+      tags:
+      - orders
+schemes:
+- http
+- https
+swagger: "2.0"

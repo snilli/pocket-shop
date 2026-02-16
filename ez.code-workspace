@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{ "path": ".", "name": "root" },
+		{ "path": "pocket-shop", "name": "pocket-shop" },
+		{ "path": "ez-client-go", "name": "ez-client-go" },
+		{ "path": "orm", "name": "orm" }
+	],
+	"settings": {
+		"go.lintTool": "golangci-lint",
+		"go.lintOnSave": "workspace",
+		"go.lintFlags": ["--issues-exit-code=0"]
+	}
+}

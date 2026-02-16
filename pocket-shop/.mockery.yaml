@@ -1,0 +1,14 @@
+filename: '{{.InterfaceName | lower}}.go'
+structname: 'Mock{{.InterfaceName}}'
+packages:
+  pocket-shop/internal/core/...:
+    config:
+      all: true
+      recursive: true
+      dir: 'mock/core/{{.SrcPackageName}}'
+      pkgname: 'mock{{.SrcPackageName}}'
+  pocket-shop/internal/port:
+    config:
+      all: true
+      dir: 'mock/port'
+      pkgname: 'mockport'

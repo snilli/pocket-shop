@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ez-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ez}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ez}
+      POSTGRES_DB: ${POSTGRES_DB:-ez}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ez} -d ${POSTGRES_DB:-ez}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pocket-shop:
+    build:
+      context: .
+      dockerfile: pocket-shop/Dockerfile
+    container_name: ez-pocket-shop
+    env_file:
+      - pocket-shop/.env
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ใช้ผ่าน make generate (รันเป็น one-off ไม่ได้รันค้าง)
+  # tag ใช้ latest หรือ unstable ตามที่ hub มี
+  swagger-codegen:
+    image: swaggerapi/swagger-codegen-cli-v3:latest
+    volumes:
+      - .:/local
+    working_dir: /local
+    # ไม่รันคำสั่ง default; เวลา generate ใช้: docker compose run --rm swagger-codegen generate -i /local/xxx -l yy -o /local/out
+    stdin_open: true
+    tty: true
+    profiles:
+      - codegen
+
+volumes:
+  postgres_data:

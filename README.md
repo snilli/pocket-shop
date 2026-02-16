@@ -118,11 +118,12 @@ pocket-shop/
 
 ### Key Decisions (ตัดสินใจเอง)
 
-1. **PostgreSQL + Ent ORM แทน in-memory** — เลือกใช้ persistent storage เพราะต้องการให้ available pool และ order history อยู่รอดข้าม restart ได้ แม้โจทย์อนุญาต in-memory
-2. **`FOR UPDATE ... SKIP LOCKED` สำหรับ reservation pool** — ใช้ row-level locking ของ PostgreSQL แทน application-level mutex เพื่อรองรับ concurrent requests โดยไม่ต้อง distributed lock
-3. **Background discover job แยกจาก Create Order** — แทนที่จะ scan หา available EZ orders ตอน create ทุกครั้ง เลือกทำเป็น background routine ที่รันต่อเนื่อง เพื่อให้ Create Order path เร็วที่สุด (แค่ Pull จาก pool)
-4. **Lazy status check ใน GET /orders/:id** — ตอน GET ถ้า order ยัง PROCESSING จะเช็ค EZ status + timeout ทันที แทนที่จะรอแค่ background job อัพเดท ทำให้ client ได้ข้อมูลล่าสุดเสมอ
-5. **Clean Architecture แยก layer ชัดเจน** — domain/service/repository/delivery/infrastructure แยกออกจากกัน ทำให้ mock ง่าย test ง่าย และเปลี่ยน storage หรือ external API ได้โดยไม่กระทบ business logic
+1. **PostgreSQL + Ent ORM แทน in-memory** — เลือกใช้ persistent storage เพราะต้องการให้ available pool และ order history อยู่รอดข้าม restart ได้ แม้โจทย์อนุญาต in-memory โดยเลือก Ent เพราะเป็น ORM ระดับ code generation ที่ให้ type-safe query ทั้งหมด — ไม่ต้องเขียน raw SQL หรือ string-based query ลด runtime error ได้มาก
+2. **Swagger Codegen สำหรับ EZ API client** — ใช้ Swagger Codegen (docker compose service) generate Go client จาก EZ OpenAPI spec แทนการเขียน HTTP client เอง ทำให้ได้ typed models/methods ที่ตรงกับ API spec เสมอ และสามารถ regenerate ได้ทันทีเมื่อ spec เปลี่ยน รองรับ generate client ได้หลายภาษา (Go, TypeScript, Java ฯลฯ) จาก spec เดียวกัน
+3. **`FOR UPDATE ... SKIP LOCKED` สำหรับ reservation pool** — ใช้ row-level locking ของ PostgreSQL แทน application-level mutex เพื่อรองรับ concurrent requests โดยไม่ต้อง distributed lock
+4. **Background discover job แยกจาก Create Order** — แทนที่จะ scan หา available EZ orders ตอน create ทุกครั้ง เลือกทำเป็น background routine ที่รันต่อเนื่อง เพื่อให้ Create Order path เร็วที่สุด (แค่ Pull จาก pool)
+5. **Lazy status check ใน GET /orders/:id** — ตอน GET ถ้า order ยัง PROCESSING จะเช็ค EZ status + timeout ทันที แทนที่จะรอแค่ background job อัพเดท ทำให้ client ได้ข้อมูลล่าสุดเสมอ
+6. **Clean Architecture แยก layer ชัดเจน** — domain/service/repository/delivery/infrastructure แยกออกจากกัน ทำให้ mock ง่าย test ง่าย และเปลี่ยน storage หรือ external API ได้โดยไม่กระทบ business logic
 
 ### Assumptions & Trade-offs
 

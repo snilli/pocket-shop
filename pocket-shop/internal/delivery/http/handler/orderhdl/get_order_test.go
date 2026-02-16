@@ -13,14 +13,14 @@ import (
 	mockorder "pocket-shop/mock/core/order"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 )
 
 const validOrderID = "550e8400-e29b-41d4-a716-446655440000"
 
-var _ = ginkgo.Describe("GetOrder handler", func() {
+var _ = Describe("GetOrder handler", func() {
 	var (
 		app     *fiber.App
 		handler *orderhdl.Handler
@@ -28,17 +28,17 @@ var _ = ginkgo.Describe("GetOrder handler", func() {
 		cfg     *config.Config
 	)
 
-	ginkgo.BeforeEach(func() {
+	BeforeEach(func() {
 		cfg = &config.Config{RefSource: "test"}
-		svc = mockorder.NewMockOrderService(ginkgo.GinkgoT())
+		svc = mockorder.NewMockOrderService(GinkgoT())
 		handler = orderhdl.NewHandler(svc, cfg)
 		app = fiber.New()
 		api := app.Group("/api/v1")
 		handler.RegisterRoutes(api)
 	})
 
-	ginkgo.When("GetOrder succeeds", func() {
-		ginkgo.It("returns 200 with id, status and redeemCode", func() {
+	When("GetOrder succeeds", func() {
+		It("returns 200 with id, status and redeemCode", func() {
 			code := "CODE123"
 			expected := &domain.Order{
 				ID: validOrderID, RefID: "ref-1", RefSource: "test",
@@ -53,7 +53,7 @@ var _ = ginkgo.Describe("GetOrder handler", func() {
 			Expect(resp.Header.Get("Content-Type")).To(ContainSubstring("application/json"))
 		})
 
-		ginkgo.It("returns 200 with redeemCode null when service returns nil code", func() {
+		It("returns 200 with redeemCode null when service returns nil code", func() {
 			expected := &domain.Order{
 				ID: validOrderID, RefID: "ref-1", RefSource: "test",
 				Status: domain.StatusProcessing,
@@ -67,8 +67,8 @@ var _ = ginkgo.Describe("GetOrder handler", func() {
 		})
 	})
 
-	ginkgo.When("order not found", func() {
-		ginkgo.It("returns 404 when service returns ErrOrderNotFound", func() {
+	When("order not found", func() {
+		It("returns 404 when service returns ErrOrderNotFound", func() {
 			svc.EXPECT().GetOrder(mock.Anything, validOrderID).Return(nil, nil, order.ErrOrderNotFound)
 
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/orders/"+validOrderID, nil)
@@ -78,8 +78,8 @@ var _ = ginkgo.Describe("GetOrder handler", func() {
 		})
 	})
 
-	ginkgo.When("GetOrder returns other error", func() {
-		ginkgo.It("returns 500 with error response", func() {
+	When("GetOrder returns other error", func() {
+		It("returns 500 with error response", func() {
 			svc.EXPECT().GetOrder(mock.Anything, validOrderID).Return(nil, nil, errors.New("db error"))
 
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/orders/"+validOrderID, nil)
@@ -89,8 +89,8 @@ var _ = ginkgo.Describe("GetOrder handler", func() {
 		})
 	})
 
-	ginkgo.When("id is invalid", func() {
-		ginkgo.It("returns 400 when id is not a valid UUID", func() {
+	When("id is invalid", func() {
+		It("returns 400 when id is not a valid UUID", func() {
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/orders/not-a-uuid", nil)
 			resp, err := app.Test(req, fiber.TestConfig{})
 			Expect(err).To(BeNil())

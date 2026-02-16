@@ -11,14 +11,14 @@ import (
 	"pocket-shop/internal/core/order/service/ordersvc"
 	"pocket-shop/internal/port"
 
-	"github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 	mockorder "pocket-shop/mock/core/order"
 	mockport "pocket-shop/mock/port"
 )
 
-var _ = ginkgo.Describe("GetOrder", func() {
+var _ = Describe("GetOrder", func() {
 	var (
 		ctx    context.Context
 		cfg    *config.Config
@@ -28,20 +28,20 @@ var _ = ginkgo.Describe("GetOrder", func() {
 		svc    order.OrderService
 	)
 
-	ginkgo.BeforeEach(func() {
+	BeforeEach(func() {
 		ctx = context.Background()
 		cfg = &config.Config{
 			RefSource:                    "test",
 			OrderFulfillmentTimeoutSec:   60,
 		}
-		repo = mockorder.NewMockOrderRepository(ginkgo.GinkgoT())
-		reserv = mockorder.NewMockOrderReservationRepository(ginkgo.GinkgoT())
-		ez = mockport.NewMockEZClient(ginkgo.GinkgoT())
+		repo = mockorder.NewMockOrderRepository(GinkgoT())
+		reserv = mockorder.NewMockOrderReservationRepository(GinkgoT())
+		ez = mockport.NewMockEZClient(GinkgoT())
 		svc = ordersvc.New(repo, reserv, ez, cfg)
 	})
 
-	ginkgo.When("order not found", func() {
-		ginkgo.It("returns ErrOrderNotFound when repo.GetByID returns nil", func() {
+	When("order not found", func() {
+		It("returns ErrOrderNotFound when repo.GetByID returns nil", func() {
 			repo.EXPECT().GetByID(ctx, "id-1").Return(nil, nil)
 
 			o, code, err := svc.GetOrder(ctx, "id-1")
@@ -50,7 +50,7 @@ var _ = ginkgo.Describe("GetOrder", func() {
 			Expect(code).To(BeNil())
 		})
 
-		ginkgo.It("returns error when repo.GetByID fails", func() {
+		It("returns error when repo.GetByID fails", func() {
 			repo.EXPECT().GetByID(ctx, "id-1").Return(nil, errors.New("db error"))
 
 			o, code, err := svc.GetOrder(ctx, "id-1")
@@ -60,8 +60,8 @@ var _ = ginkgo.Describe("GetOrder", func() {
 		})
 	})
 
-	ginkgo.When("order is cancelled", func() {
-		ginkgo.It("returns order with nil code without calling EZ", func() {
+	When("order is cancelled", func() {
+		It("returns order with nil code without calling EZ", func() {
 			expected := &domain.Order{
 				ID: "id-1", RefID: "ref-1", RefSource: "test",
 				Status: domain.StatusCancelled, CreatedAt: time.Now(),
@@ -75,8 +75,8 @@ var _ = ginkgo.Describe("GetOrder", func() {
 		})
 	})
 
-	ginkgo.When("order is completed", func() {
-		ginkgo.It("returns order and redeem code when GetFirstRedeemCode returns code", func() {
+	When("order is completed", func() {
+		It("returns order and redeem code when GetFirstRedeemCode returns code", func() {
 			expected := &domain.Order{
 				ID: "id-1", RefID: "ref-1", RefSource: "test",
 				Status: domain.StatusCompleted, CreatedAt: time.Now(),
@@ -91,7 +91,7 @@ var _ = ginkgo.Describe("GetOrder", func() {
 			Expect(*code).To(Equal("CODE123"))
 		})
 
-		ginkgo.It("returns order and nil code when GetFirstRedeemCode returns empty", func() {
+		It("returns order and nil code when GetFirstRedeemCode returns empty", func() {
 			expected := &domain.Order{
 				ID: "id-1", RefID: "ref-1", RefSource: "test",
 				Status: domain.StatusCompleted, CreatedAt: time.Now(),
@@ -105,7 +105,7 @@ var _ = ginkgo.Describe("GetOrder", func() {
 			Expect(code).To(BeNil())
 		})
 
-		ginkgo.It("returns error when GetFirstRedeemCode fails for completed order", func() {
+		It("returns error when GetFirstRedeemCode fails for completed order", func() {
 			expected := &domain.Order{
 				ID: "id-1", RefID: "ref-1", RefSource: "test",
 				Status: domain.StatusCompleted, CreatedAt: time.Now(),
@@ -120,8 +120,8 @@ var _ = ginkgo.Describe("GetOrder", func() {
 		})
 	})
 
-	ginkgo.When("order is processing", func() {
-		ginkgo.It("returns order with completed status and code when EZ returns COMPLETED with code", func() {
+	When("order is processing", func() {
+		It("returns order with completed status and code when EZ returns COMPLETED with code", func() {
 			expected := &domain.Order{
 				ID: "id-1", RefID: "ref-1", RefSource: "test",
 				Status: domain.StatusProcessing, CreatedAt: time.Now(),
@@ -141,7 +141,7 @@ var _ = ginkgo.Describe("GetOrder", func() {
 			Expect(*code).To(Equal("CODE456"))
 		})
 
-		ginkgo.It("returns order cancelled when past fulfillment timeout", func() {
+		It("returns order cancelled when past fulfillment timeout", func() {
 			createdAt := time.Now().Add(-2 * time.Hour)
 			expected := &domain.Order{
 				ID: "id-1", RefID: "ref-1", RefSource: "test",
@@ -157,7 +157,7 @@ var _ = ginkgo.Describe("GetOrder", func() {
 			Expect(code).To(BeNil())
 		})
 
-		ginkgo.It("returns order with nil code when GetOrder returns error", func() {
+		It("returns order with nil code when GetOrder returns error", func() {
 			expected := &domain.Order{
 				ID: "id-1", RefID: "ref-1", RefSource: "test",
 				Status: domain.StatusProcessing, CreatedAt: time.Now(),
@@ -171,7 +171,7 @@ var _ = ginkgo.Describe("GetOrder", func() {
 			Expect(code).To(BeNil())
 		})
 
-		ginkgo.It("returns order with nil code when GetOrder returns nil", func() {
+		It("returns order with nil code when GetOrder returns nil", func() {
 			expected := &domain.Order{
 				ID: "id-1", RefID: "ref-1", RefSource: "test",
 				Status: domain.StatusProcessing, CreatedAt: time.Now(),
@@ -185,7 +185,7 @@ var _ = ginkgo.Describe("GetOrder", func() {
 			Expect(code).To(BeNil())
 		})
 
-		ginkgo.It("returns order with nil code when EZ returns non-COMPLETED", func() {
+		It("returns order with nil code when EZ returns non-COMPLETED", func() {
 			expected := &domain.Order{
 				ID: "id-1", RefID: "ref-1", RefSource: "test",
 				Status: domain.StatusProcessing, CreatedAt: time.Now(),
@@ -201,7 +201,7 @@ var _ = ginkgo.Describe("GetOrder", func() {
 			Expect(code).To(BeNil())
 		})
 
-		ginkgo.It("returns order with nil code when EZ COMPLETED but GetFirstRedeemCode returns empty", func() {
+		It("returns order with nil code when EZ COMPLETED but GetFirstRedeemCode returns empty", func() {
 			expected := &domain.Order{
 				ID: "id-1", RefID: "ref-1", RefSource: "test",
 				Status: domain.StatusProcessing, CreatedAt: time.Now(),

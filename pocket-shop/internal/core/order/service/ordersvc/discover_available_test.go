@@ -14,12 +14,12 @@ import (
 	mockorder "pocket-shop/mock/core/order"
 	mockport "pocket-shop/mock/port"
 
-	"github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
 )
 
-var _ = ginkgo.Describe("DiscoverAvailable", func() {
+var _ = Describe("DiscoverAvailable", func() {
 	var (
 		ctx    context.Context
 		cfg    *config.Config
@@ -29,17 +29,17 @@ var _ = ginkgo.Describe("DiscoverAvailable", func() {
 		svc    order.OrderService
 	)
 
-	ginkgo.BeforeEach(func() {
+	BeforeEach(func() {
 		ctx = context.Background()
 		cfg = &config.Config{RefSource: "test"}
-		repo = mockorder.NewMockOrderRepository(ginkgo.GinkgoT())
-		reserv = mockorder.NewMockOrderReservationRepository(ginkgo.GinkgoT())
-		ez = mockport.NewMockEZClient(ginkgo.GinkgoT())
+		repo = mockorder.NewMockOrderRepository(GinkgoT())
+		reserv = mockorder.NewMockOrderReservationRepository(GinkgoT())
+		ez = mockport.NewMockEZClient(GinkgoT())
 		svc = ordersvc.New(repo, reserv, ez, cfg)
 	})
 
-	ginkgo.When("GetRecovery fails", func() {
-		ginkgo.It("returns error", func() {
+	When("GetRecovery fails", func() {
+		It("returns error", func() {
 			repo.EXPECT().GetRecovery(ctx, "test").Return(nil, errors.New("db error"))
 
 			err := svc.DiscoverAvailable(ctx, "test")
@@ -47,8 +47,8 @@ var _ = ginkgo.Describe("DiscoverAvailable", func() {
 		})
 	})
 
-	ginkgo.When("no recovery orders", func() {
-		ginkgo.It("returns nil without calling EZ or Push", func() {
+	When("no recovery orders", func() {
+		It("returns nil without calling EZ or Push", func() {
 			repo.EXPECT().GetRecovery(ctx, "test").Return([]domain.Order{}, nil)
 
 			err := svc.DiscoverAvailable(ctx, "test")
@@ -56,8 +56,8 @@ var _ = ginkgo.Describe("DiscoverAvailable", func() {
 		})
 	})
 
-	ginkgo.When("recovery orders exist and one is completed with code", func() {
-		ginkgo.It("pushes refID to pool and calls MarkRefIDUsed", func() {
+	When("recovery orders exist and one is completed with code", func() {
+		It("pushes refID to pool and calls MarkRefIDUsed", func() {
 			orders := []domain.Order{
 				{ID: "o1", RefID: "ref-1", RefSource: "test", Status: domain.StatusProcessing, CreatedAt: time.Now()},
 			}
@@ -74,7 +74,7 @@ var _ = ginkgo.Describe("DiscoverAvailable", func() {
 			Expect(err).To(BeNil())
 		})
 
-		ginkgo.It("continues when MarkRefIDUsed fails after push", func() {
+		It("continues when MarkRefIDUsed fails after push", func() {
 			orders := []domain.Order{
 				{ID: "o1", RefID: "ref-1", RefSource: "test", Status: domain.StatusProcessing, CreatedAt: time.Now()},
 			}
@@ -92,54 +92,58 @@ var _ = ginkgo.Describe("DiscoverAvailable", func() {
 		})
 	})
 
-	ginkgo.When("recovery orders exist but none get pushed", func() {
-		ginkgo.It("returns nil when Count returns error so order is skipped", func() {
+	When("recovery orders exist but none get pushed", func() {
+		It("returns nil when Count returns error so order is skipped", func() {
 			orders := []domain.Order{
 				{ID: "o1", RefID: "ref-1", RefSource: "test", Status: domain.StatusProcessing, CreatedAt: time.Now()},
 			}
 			repo.EXPECT().GetRecovery(ctx, "test").Return(orders, nil)
 			repo.EXPECT().Count(mock.Anything, mock.Anything).Return(0, errors.New("count error"))
+			repo.EXPECT().MarkRefIDUsed(ctx, "test", []string{"ref-1"}).Return(nil)
 
 			err := svc.DiscoverAvailable(ctx, "test")
 			Expect(err).To(BeNil())
 		})
 
-		ginkgo.It("returns nil when Count > 0 so order is skipped", func() {
+		It("returns nil when Count > 0 so order is skipped", func() {
 			orders := []domain.Order{
 				{ID: "o1", RefID: "ref-1", RefSource: "test", Status: domain.StatusProcessing, CreatedAt: time.Now()},
 			}
 			repo.EXPECT().GetRecovery(ctx, "test").Return(orders, nil)
 			repo.EXPECT().Count(mock.Anything, mock.Anything).Return(1, nil)
+			repo.EXPECT().MarkRefIDUsed(ctx, "test", []string{"ref-1"}).Return(nil)
 
 			err := svc.DiscoverAvailable(ctx, "test")
 			Expect(err).To(BeNil())
 		})
 
-		ginkgo.It("returns nil when GetOrder returns error", func() {
+		It("returns nil when GetOrder returns error", func() {
 			orders := []domain.Order{
 				{ID: "o1", RefID: "ref-1", RefSource: "test", Status: domain.StatusProcessing, CreatedAt: time.Now()},
 			}
 			repo.EXPECT().GetRecovery(ctx, "test").Return(orders, nil)
 			repo.EXPECT().Count(mock.Anything, mock.Anything).Return(0, nil)
 			ez.EXPECT().GetOrder(mock.Anything, "ref-1").Return(nil, errors.New("ez error"))
+			repo.EXPECT().MarkRefIDUsed(ctx, "test", []string{"ref-1"}).Return(nil)
 
 			err := svc.DiscoverAvailable(ctx, "test")
 			Expect(err).To(BeNil())
 		})
 
-		ginkgo.It("returns nil when GetOrder returns nil order", func() {
+		It("returns nil when GetOrder returns nil order", func() {
 			orders := []domain.Order{
 				{ID: "o1", RefID: "ref-1", RefSource: "test", Status: domain.StatusProcessing, CreatedAt: time.Now()},
 			}
 			repo.EXPECT().GetRecovery(ctx, "test").Return(orders, nil)
 			repo.EXPECT().Count(mock.Anything, mock.Anything).Return(0, nil)
 			ez.EXPECT().GetOrder(mock.Anything, "ref-1").Return(nil, nil)
+			repo.EXPECT().MarkRefIDUsed(ctx, "test", []string{"ref-1"}).Return(nil)
 
 			err := svc.DiscoverAvailable(ctx, "test")
 			Expect(err).To(BeNil())
 		})
 
-		ginkgo.It("returns nil when GetOrder returns non-COMPLETED", func() {
+		It("returns nil when GetOrder returns non-COMPLETED and no redeem code", func() {
 			orders := []domain.Order{
 				{ID: "o1", RefID: "ref-1", RefSource: "test", Status: domain.StatusProcessing, CreatedAt: time.Now()},
 			}
@@ -148,12 +152,14 @@ var _ = ginkgo.Describe("DiscoverAvailable", func() {
 			ez.EXPECT().GetOrder(mock.Anything, "ref-1").Return(&port.Order{
 				TransactionId: "ref-1", Status: port.PROCESSING_OrderStatus,
 			}, nil)
+			ez.EXPECT().GetFirstRedeemCode(mock.Anything, "ref-1").Return("", nil)
+			repo.EXPECT().MarkRefIDUsed(ctx, "test", []string{"ref-1"}).Return(nil)
 
 			err := svc.DiscoverAvailable(ctx, "test")
 			Expect(err).To(BeNil())
 		})
 
-		ginkgo.It("returns nil when GetFirstRedeemCode returns error", func() {
+		It("returns nil when GetFirstRedeemCode returns error", func() {
 			orders := []domain.Order{
 				{ID: "o1", RefID: "ref-1", RefSource: "test", Status: domain.StatusProcessing, CreatedAt: time.Now()},
 			}
@@ -163,12 +169,13 @@ var _ = ginkgo.Describe("DiscoverAvailable", func() {
 				TransactionId: "ref-1", Status: port.COMPLETED_OrderStatus,
 			}, nil)
 			ez.EXPECT().GetFirstRedeemCode(mock.Anything, "ref-1").Return("", errors.New("code error"))
+			repo.EXPECT().MarkRefIDUsed(ctx, "test", []string{"ref-1"}).Return(nil)
 
 			err := svc.DiscoverAvailable(ctx, "test")
 			Expect(err).To(BeNil())
 		})
 
-		ginkgo.It("returns nil when GetFirstRedeemCode returns empty", func() {
+		It("returns nil when GetFirstRedeemCode returns empty", func() {
 			orders := []domain.Order{
 				{ID: "o1", RefID: "ref-1", RefSource: "test", Status: domain.StatusProcessing, CreatedAt: time.Now()},
 			}
@@ -178,12 +185,13 @@ var _ = ginkgo.Describe("DiscoverAvailable", func() {
 				TransactionId: "ref-1", Status: port.COMPLETED_OrderStatus,
 			}, nil)
 			ez.EXPECT().GetFirstRedeemCode(mock.Anything, "ref-1").Return("", nil)
+			repo.EXPECT().MarkRefIDUsed(ctx, "test", []string{"ref-1"}).Return(nil)
 
 			err := svc.DiscoverAvailable(ctx, "test")
 			Expect(err).To(BeNil())
 		})
 
-		ginkgo.It("returns nil when Push fails", func() {
+		It("returns nil when Push fails", func() {
 			orders := []domain.Order{
 				{ID: "o1", RefID: "ref-1", RefSource: "test", Status: domain.StatusProcessing, CreatedAt: time.Now()},
 			}
@@ -194,6 +202,7 @@ var _ = ginkgo.Describe("DiscoverAvailable", func() {
 			}, nil)
 			ez.EXPECT().GetFirstRedeemCode(mock.Anything, "ref-1").Return("CODE1", nil)
 			reserv.EXPECT().Push(mock.Anything, "test", "ref-1").Return(errors.New("push failed"))
+			repo.EXPECT().MarkRefIDUsed(ctx, "test", []string{"ref-1"}).Return(nil)
 
 			err := svc.DiscoverAvailable(ctx, "test")
 			Expect(err).To(BeNil())

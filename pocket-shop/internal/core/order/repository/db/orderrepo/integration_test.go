@@ -10,18 +10,18 @@ import (
 	"pocket-shop/internal/testutil"
 
 	"github.com/google/uuid"
-	"github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-var _ = ginkgo.Describe("Order repository integration", ginkgo.Label("integration"), func() {
+var _ = Describe("Order repository integration", Label("integration"), func() {
 	var (
 		ctx  context.Context
 		pg   *testutil.PostgresContainer
 		repo order.OrderRepository
 	)
 
-	ginkgo.BeforeEach(func() {
+	BeforeEach(func() {
 		ctx = context.Background()
 		var err error
 		pg, err = testutil.NewPostgresContainer(ctx)
@@ -29,13 +29,13 @@ var _ = ginkgo.Describe("Order repository integration", ginkgo.Label("integratio
 		repo = orderrepo.New(pg.Client)
 	})
 
-	ginkgo.AfterEach(func() {
+	AfterEach(func() {
 		if pg != nil {
 			Expect(pg.Close(ctx)).To(Succeed())
 		}
 	})
 
-	ginkgo.DescribeTable("Create",
+	DescribeTable("Create",
 		func(setup func() domain.Order, expectID bool) {
 			o := setup()
 			created, err := repo.Create(ctx, o)
@@ -48,25 +48,25 @@ var _ = ginkgo.Describe("Order repository integration", ginkgo.Label("integratio
 				Expect(created.ID).NotTo(BeEmpty())
 			}
 		},
-		ginkgo.Entry("with explicit ID", func() domain.Order {
+		Entry("with explicit ID", func() domain.Order {
 			id := uuid.New().String()
 			o := domain.Create("ref-1", "source")
 			o.ID = id
 			return *o
 		}, true),
-		ginkgo.Entry("without ID (auto UUID)", func() domain.Order {
+		Entry("without ID (auto UUID)", func() domain.Order {
 			o := domain.Create("ref-2", "source")
 			return *o
 		}, true),
-		ginkgo.Entry("completed status", func() domain.Order {
+		Entry("completed status", func() domain.Order {
 			o := domain.Create("ref-3", "source")
 			o.Complete()
 			return *o
 		}, true),
 	)
 
-	ginkgo.When("Create and GetByID", func() {
-		ginkgo.It("saves and retrieves order by ID", func() {
+	When("Create and GetByID", func() {
+		It("saves and retrieves order by ID", func() {
 			o := domain.Create("ref-get", "source")
 			o.ID = uuid.New().String()
 			created, err := repo.Create(ctx, *o)
@@ -81,15 +81,15 @@ var _ = ginkgo.Describe("Order repository integration", ginkgo.Label("integratio
 			Expect(got.RefSource).To(Equal("source"))
 		})
 
-		ginkgo.It("returns nil nil when order not found", func() {
+		It("returns nil nil when order not found", func() {
 			got, err := repo.GetByID(ctx, uuid.New().String())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(got).To(BeNil())
 		})
 	})
 
-	ginkgo.When("Save", func() {
-		ginkgo.It("updates order status", func() {
+	When("Save", func() {
+		It("updates order status", func() {
 			o := domain.Create("ref-save", "source")
 			o.ID = uuid.New().String()
 			created, err := repo.Create(ctx, *o)
@@ -104,8 +104,8 @@ var _ = ginkgo.Describe("Order repository integration", ginkgo.Label("integratio
 		})
 	})
 
-	ginkgo.When("Count", func() {
-		ginkgo.It("returns 0 when no matching orders", func() {
+	When("Count", func() {
+		It("returns 0 when no matching orders", func() {
 			n, err := repo.Count(ctx, order.OrderGetInput{
 				RefSource: "src",
 				RefID:     "r1",
@@ -115,7 +115,7 @@ var _ = ginkgo.Describe("Order repository integration", ginkgo.Label("integratio
 			Expect(n).To(Equal(0))
 		})
 
-		ginkgo.It("returns count of matching orders", func() {
+		It("returns count of matching orders", func() {
 			o := domain.Create("r1", "src")
 			o.ID = uuid.New().String()
 			o.Complete()
@@ -137,14 +137,14 @@ var _ = ginkgo.Describe("Order repository integration", ginkgo.Label("integratio
 		})
 	})
 
-	ginkgo.When("GetRecovery", func() {
-		ginkgo.It("returns empty when no recovery candidates", func() {
+	When("GetRecovery", func() {
+		It("returns empty when no recovery candidates", func() {
 			list, err := repo.GetRecovery(ctx, "src")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(list).To(BeEmpty())
 		})
 
-		ginkgo.It("returns processing orders not yet used (no completed with same ref_id)", func() {
+		It("returns processing orders not yet used (no completed with same ref_id)", func() {
 			o := domain.Create("ref-recovery", "src")
 			o.ID = uuid.New().String()
 			o.Status = domain.StatusProcessing
@@ -158,7 +158,7 @@ var _ = ginkgo.Describe("Order repository integration", ginkgo.Label("integratio
 			Expect(list[0].RefID).To(Equal("ref-recovery"))
 		})
 
-		ginkgo.It("excludes ref_ids that have a completed order", func() {
+		It("excludes ref_ids that have a completed order", func() {
 			// Processing with ref-recovery
 			o1 := domain.Create("ref-recovery", "src")
 			o1.ID = uuid.New().String()
@@ -178,8 +178,8 @@ var _ = ginkgo.Describe("Order repository integration", ginkgo.Label("integratio
 		})
 	})
 
-	ginkgo.When("MarkRefIDUsed", func() {
-		ginkgo.It("sets used_at for matching orders", func() {
+	When("MarkRefIDUsed", func() {
+		It("sets used_at for matching orders", func() {
 			o := domain.Create("ref-mark", "src")
 			o.ID = uuid.New().String()
 			o.Status = domain.StatusProcessing
@@ -196,7 +196,7 @@ var _ = ginkgo.Describe("Order repository integration", ginkgo.Label("integratio
 			Expect(list).To(BeEmpty())
 		})
 
-		ginkgo.It("is no-op when refIDs empty", func() {
+		It("is no-op when refIDs empty", func() {
 			Expect(repo.MarkRefIDUsed(ctx, "src", nil)).To(Succeed())
 			Expect(repo.MarkRefIDUsed(ctx, "src", []string{})).To(Succeed())
 		})
